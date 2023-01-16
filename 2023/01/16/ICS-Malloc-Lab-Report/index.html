@@ -23,18 +23,12 @@
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="MALLOC LAB 实验报告实现思路V1 Implicit free list 隐式空闲链表这是csapp课本上介绍最为详细的一种方法，也是最简单的一种实现方法。 数据结构使用header+payload|padding+footer，其中header和footer各占8字节，由于Size满足16字节对齐，因此低4位均为0，可以用最低位置a表示此区域是否为空  通过每个块的起始位置和对应的Siz">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113161222265.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113162952533.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113165525883.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113172852701.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113172700225.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113182616136.png">
-<meta property="og:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113191932522.png">
+<meta property="og:image" content="http://example.com/img/ICS/csapp.jpg">
 <meta property="article:published_time" content="2023-01-16T03:21:51.000Z">
-<meta property="article:modified_time" content="2023-01-16T03:22:17.106Z">
+<meta property="article:modified_time" content="2023-01-16T06:50:23.793Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="c:/Users/tehaj/AppData/Roaming/Typora/typora-user-images/image-20230113161222265.png">
+<meta name="twitter:image" content="http://example.com/img/ICS/csapp.jpg">
   
   
   
@@ -198,7 +192,7 @@
   
 
 <div id="banner" class="banner" parallax=true
-     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+     style="background: url('/img/ICS/csapp.jpg') no-repeat center center; background-size: cover;">
   <div class="full-bg-img">
     <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
       <div class="banner-text text-center fade-in-up">
@@ -283,9 +277,9 @@
                 
                 <h1 id="MALLOC-LAB-实验报告"><a href="#MALLOC-LAB-实验报告" class="headerlink" title="MALLOC LAB 实验报告"></a>MALLOC LAB 实验报告</h1><h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><h3 id="V1-Implicit-free-list-隐式空闲链表"><a href="#V1-Implicit-free-list-隐式空闲链表" class="headerlink" title="V1 Implicit free list 隐式空闲链表"></a>V1 Implicit free list 隐式空闲链表</h3><p>这是csapp课本上介绍最为详细的一种方法，也是最简单的一种实现方法。</p>
 <h4 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h4><p>使用header+payload|padding+footer，其中header和footer各占8字节，由于Size满足16字节对齐，因此低4位均为0，可以用最低位置a表示此区域是否为空</p>
-<p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113161222265.png" srcset="/img/loading.gif" lazyload alt="image-20230113161222265" style="zoom: 50%;" /></p>
+<p><img src="/img/ICS\image-20230113161222265.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <p>通过每个块的起始位置和对应的Size大小，可以找到相邻的块儿，这样就构成了一条双向链表，可以在线性正比于块总数的时间内查找</p>
-<p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113162952533.png" srcset="/img/loading.gif" lazyload alt="image-20230113162952533" style="zoom: 50%;" /></p>
+<p><img src="/img/ICS\image-20230113162952533.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <p>起始被染成灰色的块为<strong>序言块</strong>，其含义可以类比于链表数据结构中的头指针，这一设计可以在之后的合并块拆分块时省去对边界情况的考虑，大大降低了讨论的难度。</p>
 <h4 id="重点代码解读"><a href="#重点代码解读" class="headerlink" title="重点代码解读"></a>重点代码解读</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> WSIZE 4 <span class="hljs-comment">/* Word and header/footer size (bytes) */</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> DSIZE 8 <span class="hljs-comment">/* Double word size (bytes) */</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> ALIGNMENT 16 <span class="hljs-comment">/* 16 bytes alignment */</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MINBLOCKSIZE 16 <span class="hljs-comment">/* Min size of block(bytes) */</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> CHUNKSIZE (1 &lt;&lt; 12) <span class="hljs-comment">/* Extend heap by this amount (bytes) */</span></span><br></code></pre></td></tr></table></figure>
 <p>大部分函数都可以完全照搬csapp中的实现方法，其中<code>find_fit</code>和<code>place</code>两个自定义函数实现思路如下：</p>
@@ -293,7 +287,7 @@
 <li><code>static void* find_fit(size_t size)</code>：采用首次适配搜索方法，从头线性扫描链表，找到首个未分配且容量为空的块。</li>
 <li><code>static void place(void* bp, size_t asize)</code>：从给定的未分配块中“挖去”<code>asize</code>大小的一部分分配，剩余部分如果满足大于最小块大小（16 bytes），则将其分割成新的块。</li>
 </ul>
-<h4 id="测试结果及分析"><a href="#测试结果及分析" class="headerlink" title="测试结果及分析"></a>测试结果及分析</h4><p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113165525883.png" srcset="/img/loading.gif" lazyload alt="image-20230113165525883" style="zoom: 50%;" /></p>
+<h4 id="测试结果及分析"><a href="#测试结果及分析" class="headerlink" title="测试结果及分析"></a>测试结果及分析</h4><p><img src="/img/ICS\image-20230113165525883.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <p>整体表现平平，在不涉及重分配的情况下空间利用率尚可，但吞吐率偏低。对此结果的分析如下：</p>
 <ul>
 <li>吞吐率偏低：隐式空闲链表上存有所有已分配和未分配的块，这样做的好处是数据结构简单内部碎片化少，但也会导致每次搜索时时间复杂度正比于块的个数，在块总数较多的情况下会显著增加时间开销，因而导致吞吐率降低。</li>
@@ -302,8 +296,8 @@
 </ul>
 <p>基于以上分析，接下来在隐式空闲链表的基础上进一步改造优化</p>
 <h3 id="V2-Segregated-Free-Lists-分离适配"><a href="#V2-Segregated-Free-Lists-分离适配" class="headerlink" title="V2 Segregated Free Lists 分离适配"></a>V2 Segregated Free Lists 分离适配</h3><h4 id="数据结构-1"><a href="#数据结构-1" class="headerlink" title="数据结构"></a>数据结构</h4><p>这种数据结构的思想是在原有隐式空闲链表的基础上，在块之间再添加多路链表，将大小接近空闲块链接起来，从而实现更快查找。具体实现方法就是在每个块中，添加pred和succ指针，指向其对应类的前驱和后继。同时在起始地址处维护一个指针数组，用于指向各个类的第一个块。</p>
-<p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113172852701.png" srcset="/img/loading.gif" lazyload alt="image-20230113172852701" style="zoom: 50%;" /></p>
-<p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113172700225.png" srcset="/img/loading.gif" lazyload alt="image-20230113172700225" style="zoom: 50%;" /></p>
+<p><img src="/img/ICS\image-20230113172852701.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
+<p><img src="/img/ICS\image-20230113172700225.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <p>按理说n应越大越好，但考虑到n过大可能会占用过多内存导致空间利用率低，经过实验，将n选取在21效果最好，即将所有空闲块分成$\{32\},\{33\sim64\}\cdots\{2049\sim4096\}\cdots\{2^{24}\sim\infty \}$共21类（由于加入了两指针，MINBLOCKSIZE为32，无需考虑小于32的空闲块）</p>
 <h4 id="重点代码解读-1"><a href="#重点代码解读-1" class="headerlink" title="重点代码解读"></a>重点代码解读</h4><p>新增加<code>NEXT_BLKP</code>和<code>PREV_BLKP</code>宏，实现前驱后继的查找</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(((char*)(bp)-WSIZE)))</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> PREV_BLKP(bp) ((char*)(bp)-GET_SIZE(((char*)(bp)-DSIZE)))</span><br></code></pre></td></tr></table></figure>
@@ -313,7 +307,7 @@
 <p>基于分离适配方法，重新设计<code>find_fit</code>函数，每次现根据size大小找到其落在的区间，对该链表进行线性扫描，如果并没有找到合适的空快，则转向更大的区间。</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * find_fit - begin from the smallest class acording to size, find the fit block</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">void</span>* <span class="hljs-title function_">find_fit</span><span class="hljs-params">(<span class="hljs-type">size_t</span> size)</span><br>&#123;<br>    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> num = search(size); num &lt; CLASS_SIZE; num++) &#123;<br>        <span class="hljs-comment">/* scan one list, if no suitable block, jump to bigger list*/</span><br>        <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span>* bp = GET_HEAD(num); bp; bp = GET_SUC(bp)) &#123;<br>            <span class="hljs-keyword">if</span> (GET_SIZE(HDRP(bp)) &gt;= size) &#123;<br>                <span class="hljs-keyword">return</span> (<span class="hljs-type">void</span>*)bp;<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
 <p>最后，在debug过程中课本基于32位机器所写的代码所制造的隐患渐渐显现，我采取的办法较为简单暴力，将所有原书中<code>unsigned int</code>改为<code>size_t</code>（定义为<code>unsigned long</code>），并将DSIZE和WSIZE扩大为两倍，这样做虽然可能制造额外的空间开销，但是可以较好复用原书代码，并且经过和其它同学对比，这种操作对结果的影响并不大。</p>
-<h4 id="测试结果及分析-1"><a href="#测试结果及分析-1" class="headerlink" title="测试结果及分析"></a>测试结果及分析</h4><p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113182616136.png" srcset="/img/loading.gif" lazyload alt="image-20230113182616136" style="zoom: 50%;" /></p>
+<h4 id="测试结果及分析-1"><a href="#测试结果及分析-1" class="headerlink" title="测试结果及分析"></a>测试结果及分析</h4><p><img src="/img/ICS\image-20230113182616136.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <p>分离适配方法将多个测例的Kops提升了好几个数量级，吞吐率终于可以看了。熬夜DEBUG至此，不禁令人精神为之一振！下面就要对具体的测例做进一步优化。</p>
 <h3 id="V3-针对测例优化调整"><a href="#V3-针对测例优化调整" class="headerlink" title="V3 针对测例优化调整"></a>V3 针对测例优化调整</h3><h4 id="提高初块利用率"><a href="#提高初块利用率" class="headerlink" title="提高初块利用率"></a>提高初块利用率</h4><p>课本提供的<code>mm_inti</code>函数要求先为其分配一段固定大小为CHUNKSIZE(4KB)的空块，而细心观察会发现测例<code>coalescing-bal.rep</code>的特点是反复分配和释放一段内存，而内存经过16字节补齐后又刚好大于初块的大小，这就导致每次程序都会认为现有的空块无法满足要求，在尾部拓展要求大小的空间，这就导致初块始终无法被用上。基于此，我们对mm_inti做如下修改，减小初始分配块的大小，从而提高空间利用率。</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">if</span> (extend_heap(<span class="hljs-number">2</span> * DSIZE / WSIZE) == <span class="hljs-literal">NULL</span>) <span class="hljs-comment">/* adjust for coalescing-bal.rep */</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br></code></pre></td></tr></table></figure>
@@ -327,7 +321,7 @@
 <p>我们规定，如果当前适配的块大小比需要分配的大很多（大于MINBLOCKSIZE）时，我们将空间较大的块分配在空闲块的后部，较小的块分配在前部，并为之设定一个阈值SMALLSIZE（最后选为128 bytes）这样的组织方式有两方面好处，一是对块的大小进行了粗分类，有利于之后合并，另外针对<code>binary2-bal.rep</code>，这样做大大提高了尾部堆扩展的触发次数，从而进一步提高吞吐率。</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span>* <span class="hljs-title function_">place</span><span class="hljs-params">(<span class="hljs-type">void</span>* bp, <span class="hljs-type">size_t</span> asize)</span><br>&#123;<br>    <span class="hljs-type">size_t</span> size = GET_SIZE(HDRP(bp));<br>    <span class="hljs-type">size_t</span> rsize = size - asize;<br>    <span class="hljs-keyword">if</span> (!GET_ALLOC(HDRP(bp))) <span class="hljs-comment">/* for realloc, if bp is not blank, don&#x27;t delete it */</span><br>        delete (bp);<br>    <span class="hljs-keyword">if</span> (rsize &gt;= MINBLOCKSIZE) &#123; <span class="hljs-comment">// split block</span><br>        <span class="hljs-keyword">if</span> (asize &gt;= SMALLSIZE) &#123; <span class="hljs-comment">/* if asize &gt;= SMALLSIZE, then allocat it at the back of the block*/</span><br>            allocate(bp, rsize, <span class="hljs-number">0</span>);<br>            allocate(NEXT_BLKP(bp), asize, <span class="hljs-number">1</span>);<br>            <span class="hljs-keyword">return</span> NEXT_BLKP(bp);<br>        &#125; <span class="hljs-keyword">else</span> &#123; <span class="hljs-comment">/* if asize &lt; SMALLSIZE, then allocat it at the front of the block */</span><br>            allocate(bp, asize, <span class="hljs-number">1</span>);<br>            allocate(NEXT_BLKP(bp), rsize, <span class="hljs-number">0</span>);<br>            <span class="hljs-keyword">return</span> bp;<br>        &#125;<br>    &#125; <span class="hljs-keyword">else</span> <span class="hljs-comment">// do not split</span><br>    &#123;<br>        allocate(bp, size, <span class="hljs-number">1</span>);<br>        <span class="hljs-keyword">return</span> bp;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
 <p>经过上述优化后，最终得分</p>
-<p><img src="C:\Users\tehaj\AppData\Roaming\Typora\typora-user-images\image-20230113191932522.png" srcset="/img/loading.gif" lazyload alt="image-20230113191932522" style="zoom: 50%;" /></p>
+<p><img src="/img/ICS\image-20230113191932522.png" srcset="/img/loading.gif" lazyload alt="" style="zoom: 50%;" /></p>
 <h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>从几次优化的测试结果来看，分离空闲链表对性能的提升最为明显，以极小的空间利用率代价取得了吞吐率的巨大提升，几乎让得分翻了一倍！不过这也并非意味着隐式空闲链表再无用武之地，课本中指出，当总体块个数比较确定且并不是很多的情况下，隐式空闲链表可以减小内部碎片化程度并提高空间利用效率。</p>
 <p>此外，适当调整常数对于提升程序性能也可能有一定的帮助，如在实验过程中，发现CHUNKSIZE设为$2^{13}$性能会更好，但因为自身能力原因，还无法给出合理的解释。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本次实验对我个人的编程能力也是一次极大的挑战，引用一篇博客的话，可以作为我完成作业时的内心写照。</p>
