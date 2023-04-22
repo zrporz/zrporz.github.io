@@ -1,0 +1,811 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="John Doe">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="BLEU2001年提出，当时的应用场景是解决机器翻译。 基础 $BLEU_n$ 模型 分母的含义是 n-gram 词在 candidate 中有多少个，分子的含义是这些词有多少出现在了 reference 中 问题与改进 统计次数时要求 Candidates 中一个词的最大次数不能超过 Reference 中所有该词的次数和，如下面这个例子   对前 n-gram 个评价方法先取对数再线性平均得到">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NLP Evaluation">
+<meta property="og:url" content="http://example.com/2023/04/22/NLP-Evaluation/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="BLEU2001年提出，当时的应用场景是解决机器翻译。 基础 $BLEU_n$ 模型 分母的含义是 n-gram 词在 candidate 中有多少个，分子的含义是这些词有多少出现在了 reference 中 问题与改进 统计次数时要求 Candidates 中一个词的最大次数不能超过 Reference 中所有该词的次数和，如下面这个例子   对前 n-gram 个评价方法先取对数再线性平均得到">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421155925929.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421160731210.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421162006287.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421162257455.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421162742868.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421163950253.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421164401041.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421164412867.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421164951635.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421165112187.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421165123290.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421170422068.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421172233190.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421173032541.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421173848239.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421175223914.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421175428052.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421175554678.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421180459702.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421180859882.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422110511509.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422110528829.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422110537887.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421182646397.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422100424657.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422100447499.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230421183402846-1682129326640-1.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422100923009.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422102132831.png">
+<meta property="og:image" content="http://example.com/img/NLP-Evaluation/image-20230422104809386.png">
+<meta property="article:published_time" content="2023-04-22T15:50:18.000Z">
+<meta property="article:modified_time" content="2023-04-22T16:00:08.832Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/img/NLP-Evaluation/image-20230421155925929.png">
+  
+  
+  
+  <title>NLP Evaluation - Hexo</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 5.4.2"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Fluid</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="NLP Evaluation"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-04-22 23:50" pubdate>
+          2023年4月22日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          42 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">NLP Evaluation</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="BLEU"><a href="#BLEU" class="headerlink" title="BLEU"></a>BLEU</h3><p>2001年提出，当时的应用场景是解决机器翻译。</p>
+<h4 id="基础-BLEU-n-模型"><a href="#基础-BLEU-n-模型" class="headerlink" title="基础 $BLEU_n$ 模型"></a>基础 $BLEU_n$ 模型</h4><p><img src="/img/NLP-Evaluation/image-20230421155925929.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>分母的含义是 n-gram 词在 candidate 中有多少个，分子的含义是这些词有多少出现在了 reference 中</p>
+<h4 id="问题与改进"><a href="#问题与改进" class="headerlink" title="问题与改进"></a>问题与改进</h4><ul>
+<li><p><strong>统计次数时要求 Candidates 中一个词的最大次数不能超过 Reference 中所有该词的次数和，如下面这个例子</strong></p>
+<p><img src="/img/NLP-Evaluation/image-20230421160731210.png" srcset="/img/loading.gif" lazyload alt=""></p>
+</li>
+<li><p><strong>对前 n-gram 个评价方法先取对数再线性平均得到综合后的 n-gram 评分，取对数的原因是因为单个 n-gram precision 呈指数下降，先对数再平均相当于求几何均值</strong></p>
+</li>
+</ul>
+<p><img src="/img/NLP-Evaluation/image-20230421162006287.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<ul>
+<li><p><strong>BLEU模型还不能解决句子长度过小的问题，如下面这个例子</strong><img src="/img/NLP-Evaluation/image-20230421162257455.png" srcset="/img/loading.gif" lazyload alt="image-20230421162257455"></p>
+</li>
+<li><p><strong>将概念而非词作为一个最小单元来计算，可以更好的表示 candidate 语义的 precision，这样可以解决一个句子中多义词重复出现的问题，但这种方法受制于句子长短、语序语法等问题。</strong></p>
+</li>
+</ul>
+<p><img src="/img/NLP-Evaluation/image-20230421162742868.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<ul>
+<li><strong>针对句子长度过短的惩罚问题，要在得分前面乘以一个不大于1的系数BP，其中 $r$ 为所有候选句子”最佳匹配长度“（best match lengths，定义为 reference 中和候选句子长度最接近的句子长度），$c$ 为 candidates 的总长度</strong></li>
+</ul>
+<p><img src="/img/NLP-Evaluation/image-20230421163950253.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<h4 id="最终计算式"><a href="#最终计算式" class="headerlink" title="最终计算式"></a>最终计算式</h4><p>$N$ 为选择的最高语言模型元数，$w_n$ 为归一化系数，原论文 baseline 给出的是 $N=4,W_n = 1/N$</p>
+<p><img src="/img/NLP-Evaluation/image-20230421164401041.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p><img src="/img/NLP-Evaluation/image-20230421164412867.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<h4 id="模型评价"><a href="#模型评价" class="headerlink" title="模型评价"></a>模型评价</h4><p><strong>双语玩家、母语玩家和 BLUE 的 PK 结果</strong></p>
+<p><img src="/img/NLP-Evaluation/image-20230421164951635.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p><img src="/img/NLP-Evaluation/image-20230421165112187.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p><img src="/img/NLP-Evaluation/image-20230421165123290.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>BLEE预测稳定性以及可靠性的问题：Table 1展示的是每一组 candidates 结果的 BLEU 分数，Table 2 展示的是每一组 candidates （容量为500）拆成二十个小的样本以后，得分的均值方差，以及和前一次测试的 t-paired test 结果（比如 S2 就是和 S1 做 t-paired test）,考虑到 t-paired test 的 95% 拒绝域为 1.7，因此可以说明每一组评分都具有显著性差异</p>
+<p><img src="/img/NLP-Evaluation/image-20230421170422068.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p><strong>BLEU的一些特点：只关心准确率，不关注召回率（因此 BLEU 论文作者建议给 4 条reference，同时 brevity penalty 也在一定程度上起到了惩罚召回率的作用），偏向翻译相对较短的结果（brevity penalty 没有想象中那么强）</strong></p>
+<h3 id="ROUGE"><a href="#ROUGE" class="headerlink" title="ROUGE"></a>ROUGE</h3><p>2003年提出，关于它的意义，一种理解是在 SMT（统计机器翻译）时代，机器翻译效果稀烂，需要同时评价翻译的准确度和流畅度；等到 NMT （神经网络机器翻译）出来以后，神经网络脑补能力极强，翻译出的结果都是通顺的，但是有时候容易瞎翻译。</p>
+<h4 id="ROUGE-N"><a href="#ROUGE-N" class="headerlink" title="ROUGE-N"></a>ROUGE-N</h4><p><img src="/img/NLP-Evaluation/image-20230421172233190.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>分子表示 n-gram 下，reference 中和 candidate summary （候选摘要，就是从 candidates 中抽取出一些）的重合个数，分母表示 reference 中总的词个数。</p>
+<p>对于多个 reference 的情况，将得分设置为对每个 reference 单独应用 ROUGE-N 算法后再取最大值。</p>
+<p><img src="/img/NLP-Evaluation/image-20230421173032541.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>计算得分还可以通过  Jackknife （一种再抽样方法，可以降低误差）方法得到更接近人类评判的结果，但对于一般计算来说取最大值就可以了。</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/223048748">BLEU详解 - 知乎 (zhihu.com)</a></p>
+<h4 id="ROUGE-L"><a href="#ROUGE-L" class="headerlink" title="ROUGE-L"></a>ROUGE-L</h4><p>Rouge-L 的 L 表示: Longest Common Subsequence，Rouge-L 的计算利用了最长公共子序列（区别一下最长公共子串，这个是连续的，子序列不一定连续，但是二者都是有词的顺序的）。</p>
+<p><img src="/img/NLP-Evaluation/image-20230421173848239.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>上面的式子中,$X$,$Y$ 分别表示标准答案 reference 和生产答案 candidate 。$m$,$n$ 表示 $X$ 和 $Y$ 的长度，$\beta$ 为一个超参数，LCS 表示二者的最大公共子序列，$R_{lcs}$ 实际上就是改进后的召回率一般超参数 $\beta$ 都会设置的比较大，召回率对评分的影响较大，也符合 ROUGE 的初衷。</p>
+<p>对于 summary 层面，将 summary 求并后再求 CLS 应用上式</p>
+<p><img src="/img/NLP-Evaluation/image-20230421175223914.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<h4 id="ROUGE-W"><a href="#ROUGE-W" class="headerlink" title="ROUGE-W"></a>ROUGE-W</h4><p>增加了对正确结果连续性的奖励，比如下面这个例子中，$Y_1$ 和 $Y_2$ ROUGE-L 得分一致，但显然 $Y_1$ 翻译结果更好</p>
+<p><img src="/img/NLP-Evaluation/image-20230421175428052.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>计算式：</p>
+<p><img src="/img/NLP-Evaluation/image-20230421175554678.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<h4 id="ROUGE-S"><a href="#ROUGE-S" class="headerlink" title="ROUGE-S"></a>ROUGE-S</h4><p>Rouge-S的S表示：Skip-Bigram Co-Occurrence Statistics，这其实是Rouge-N的一种扩展，N-gram是连续的，Skip-bigram是允许跳过中间的某些词，同时结合了 Rouge-L 的计算方式。下面是以二元模型为例</p>
+<p><img src="/img/NLP-Evaluation/image-20230421180459702.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>$C(m,2),C(n,2)$ 就是 $X,Y$ 中二元跳词可能出现的种类个数，$SKIP2(X,Y)$ 就是统计二者在跳词层面相同的个数。</p>
+<h4 id="问题和评价"><a href="#问题和评价" class="headerlink" title="问题和评价"></a>问题和评价</h4><p>这种方法只能在单词、短语的角度去衡量两个句子的形似度。并不能支持同义词、近义词等语意级别去衡量。比如：</p>
+<p><img src="/img/NLP-Evaluation/image-20230421180859882.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>hyp1和hyp2的rouge得分是一样的。但显然hyp1才是与ref更相近的。好处是这种方式计算高效，在忽略近义词等情况下，做到比较合理的判断。</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/504279252">NLP评估指标之ROUGE - 知乎 (zhihu.com)</a></p>
+<h3 id="METEOR"><a href="#METEOR" class="headerlink" title="METEOR"></a>METEOR</h3><p>2004年提出，考虑准确率和召回率的基础上，对词序要求更严格</p>
+<p>METEOR 的提出主要是为了解决 BLEU 的这些问题：</p>
+<ul>
+<li>召回率</li>
+<li>句子流畅性</li>
+<li>同义词对语义的影响</li>
+</ul>
+<p>一些问题：</p>
+<ul>
+<li>BLEU 和 METEOR 对长度都比较敏感</li>
+</ul>
+<h4 id="计算式"><a href="#计算式" class="headerlink" title="计算式"></a>计算式</h4><p>三种匹配规则</p>
+<ul>
+<li>词映射(exact)：统计待测译文与参考译文中绝对一致单词的共现次数</li>
+<li>词干映射(porter stem)：基于波特词干算法计算待测译文与参考译文中词干相同的词语“变体”的共现次数</li>
+<li>同义词映射(WN synonymy) ：基于WordNet词典匹配待测译文与参考译文中的同义词，计入共现次数</li>
+</ul>
+<p>第一个阶段，通过额外的 module 列出所有可能的 unigram 映射，比如，对于词 ’computer’ ，在 candidate 中出现了一次，而在 reference 中出现了两次，则列出两个可能的 unigram 映射，一个是 candidate 中的 ’computer’ 映射到 reference 中的第一个 computer ，另一个则是映射到第二个 computer 。</p>
+<p>第二阶段中，选择这些 unigram mapping 的最大的子集使得满足之前的条件（即每个unigram有1个或0的对应），如果多于一个子集满足了这个条件，METEOR选择有最少 unigram mapping crosse 的那个，mapping crosses 定义为，将两句话写成两行，然后将 mapping 连起来，每个交叉的位置就是一个 mapping cross</p>
+<p>每个阶段仅仅 map 那些在前一阶段没有匹配的 unigram，第一阶段先进行 exact mapping，第二阶段进行 porter stem mapping，最后进行 WN synonymy mapping</p>
+<p>得到最后的映射后，就可以计算METEOR得分了，首先计算unigram precision，它是匹配的unigrams对数占candidate中unigram的比例，再计算unigram recall，它是匹配的unigrams对数占 reference 中的unigram的比例，然后用调和均值的方式计算Fmean。</p>
+<p><img src="/img/NLP-Evaluation/image-20230422110511509.png" srcset="/img/loading.gif" lazyload alt="image-20230422110511509"></p>
+<p>为了考虑 n-grim 匹配，METEOR设计了一种惩罚策略，首先，所有candidate中映射到reference中的unigram被分组为尽可能少的chunks中，使得在candidate中的每个毗邻的chunk在reference中也毗邻，这样，n-gram越长，则chunk就越少，极端情况下就是只有1个chunk，另一个极端就是没有bigram匹配，则就会有很多chunk</p>
+<p>例如：</p>
+<p>candidate:the president spoke to the audience<br>reference:the president then spoke to the audience<br>这就有两个chunk，”the president“和”spoke to the audience“</p>
+<p><img src="/img/NLP-Evaluation/image-20230422110528829.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>最后的计算公式为</p>
+<p><img src="/img/NLP-Evaluation/image-20230422110537887.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>如果没有bigram或者更长的匹配，Fmean会被削减最多50%，METEOR对于一组reference，计算candidate和其中每个的得分，最后选择其中最大的那个，对于整个系统的评估，METEOR计算累积 precision,recall和penalty，然后再将他们结合为最终评分。</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/luo3300612/article/details/91862617">METEOR: An Automatic Metric for MT Evaluation with Improved Correlation with Human Judgments_meteor论文_luputo的博客-CSDN博客</a></p>
+<h3 id="CIDEr"><a href="#CIDEr" class="headerlink" title="CIDEr"></a>CIDEr</h3><p>2015年提出，当时是为了给图像-字幕生成过程中对字幕质量打分，具体的问题就是一个图片会生成很多的字幕，然后需要一种算法来判断哪种字幕和 reference 的最像。</p>
+<p>CIDEr的一个重要思想就是基于TF-IDF去给不同的n-gram赋予不同的权重，降低频繁词的权重并升高关键词的权重</p>
+<h4 id="计算式-1"><a href="#计算式-1" class="headerlink" title="计算式"></a>计算式</h4><h5 id="TF-IDF-模型"><a href="#TF-IDF-模型" class="headerlink" title="TF-IDF 模型"></a><strong>TF-IDF 模型</strong></h5><p>假设对于一组图片集$I$，每个图片生成一句话 $c_i$ 作为字幕，同时对于每一个图片又有 m 个参考字幕 $S_i = {s_{i1},s_{i2}\cdots s_{im}}$，对于 $s_{ij}$ 中的每一个 n 元词组 $w_k$，其 TF-IDF 权重 $g_k(s_{ij})$ 计算方式如下</p>
+<p><img src="/img/NLP-Evaluation/image-20230421182646397.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>$\Omega$ 表示这一句话中所有 n-gram 的全部词汇，$|I|$ 表示图像个数，$k$ 第 k 个图像。</p>
+<p>前半部分称为TF (term frequence)，一般来说一个词在文档中出现的越多，TF值就越高。这部分是为了筛选出关键字。</p>
+<p>后半部分称为IDF (inverse document frequency)，如果一个n-gram在所有文档中出现的次数越多，则IDF值越低。这部分是为了去掉那些频繁出现的无意字（比如的地得这种语气助词）</p>
+<p><strong>当有TF(词频)和IDF(逆文档频率)后，将这两个词相乘，就能得到一个词的TF-IDF的值。某个词在文章中的TF-IDF越大，那么一般而言这个词在这篇文章的重要性会越高，将一句话中每一个 n-grim 词的的 TF-IDF 都算出来，可以组成一个长度为句子长度的向量，为了保证向量长度一致，真正计算过程中，会通过对长度较小的句子进行补零操作以对齐向量维度</strong></p>
+<ul>
+<li>举例：</li>
+</ul>
+<p>句子1：小明很开心，因为是晴天，可以踢足球了</p>
+<p>句子2：小明很伤心，因为是雨天，不能踢足球了。</p>
+<p>所有词的 TF-IDF 如下</p>
+<p><img src="/img/NLP-Evaluation/image-20230422100424657.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>最后能够得到的向量表示如下</p>
+<p><img src="/img/NLP-Evaluation/image-20230422100447499.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<h5 id="CIDEr-1"><a href="#CIDEr-1" class="headerlink" title="CIDEr"></a>CIDEr</h5><p>CIDER就是对每个参考或者候选句子都计算TF-IDF 向量（只不过 term 是 n-gram 而不是单词），然后对于每一张图片的一个 candidate， 计算其和剩下 m 个 reference 的余弦夹角，并据此得到候选句子和参考句子的相似度。</p>
+<p><img src="/img/NLP-Evaluation/image-20230421183402846-1682129326640-1.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>和BLEU、ROUGE一样，CIDEr也可以计算不同n-gram的聚合：</p>
+<p><img src="/img/NLP-Evaluation/image-20230422100923009.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>经验性的，baseline 参数设为 $w_n = 1/N, N=4$，这一点和 BLEU 一致。</p>
+<h4 id="一些实验结果"><a href="#一些实验结果" class="headerlink" title="一些实验结果"></a>一些实验结果</h4><p><img src="/img/NLP-Evaluation/image-20230422102132831.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>左图表示的是对比人类判断和 CIDEr、ROUGE、BLEU 算法判断准确率与 reference 句子长度的关系，可以看到，参考句子数量较少时 BLEU 表现很好，但随着句子数量增加（注意横坐标是取了对数的，实际句子数量很大）， CIDEr 和 ROUGE 的准确性稳步提升，这是因为二者相比BLEU对reference都有更深刻的理解，此外，收益在50左右饱和。</p>
+<h4 id="修改优化"><a href="#修改优化" class="headerlink" title="修改优化"></a>修改优化</h4><p>为了解决 gaming 的问题（针对某一种评价指标来优化算法使得当人类给出的分很低，但是评价指标给出的分很高）</p>
+<ol>
+<li>去除句子中的单词转换为原始形式这一步，保证时态正确</li>
+<li>加入了高斯因子，用于惩罚candidate和reference sentence长度相差较大的情况。</li>
+<li>重复高置信度（即信息含量较多的句子，比如图片有一条鱼，那句子重复说fish的情况）的单词的句子加惩罚。例如对于某个指定的n元组来说，取该n元组在candidate和reference sentence出现次数最小的数。（类似于Bleu的操作）</li>
+</ol>
+<p><img src="/img/NLP-Evaluation/image-20230422104809386.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>$l(c_i)$ 和 $l(s_{ij})$ 表示句子长度，$\sigma$ 一般取 6，式子前面乘10是为了让 CIDEr-D 得分和其它方法差不多。</p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31197209">机器学习：生动理解TF-IDF算法 - 知乎 (zhihu.com)</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_41848012/article/details/124638438">用于图像描述的评价指标CIDEr讲解_cider指标_六六六六神的博客-CSDN博客</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/Mr_zhuo_/article/details/109217387">CIDEr 评价指标_cider指标_Miss_zhuo_的博客-CSDN博客</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>NLP Evaluation</div>
+      <div>http://example.com/2023/04/22/NLP-Evaluation/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>John Doe</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年4月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/01/16/ICS-Malloc-Lab-Report/" title="ICS Malloc Lab Report">
+                        <span class="hidden-mobile">ICS Malloc Lab Report</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              load: ['ui/lazy']
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://lib.baomitu.com/mathjax/3.2.2/es5/tex-mml-chtml.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
